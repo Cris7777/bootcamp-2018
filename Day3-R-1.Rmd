@@ -1,0 +1,79 @@
+---
+title: "R Day 3"
+author: "Angela Chen"
+date: "9/19/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+generation<-read.csv(here::here("data","generation.csv"),stringsAsFactors = F)
+imports<-read.csv(here::here("data","imports.csv"),stringsAsFactors = F)
+library(lubridate)
+generation$datetime<-as_datetime(generation$datetime)
+head(generation$datetime)
+imports$datetime<-as_datetime(imports$datetime)
+head(imports$datetime)
+```
+class(generation$datetime)
+head(generation$datetime)
+
+```{r}
+library(reshape2)
+long_gen<-melt(generation,id.vars="datetime",variable.name="source",value.name = "usage")
+
+```
+
+head(long_gen)
+long_gen[order(long_gen$datetime)[1:20],]
+
+```{r}
+merged_energy<-merge(generation,imports,by="datetime")
+```
+dim(merged_energy)
+
+```{r}
+long_merged_energy<-melt(merged_energy,id.vars="datetime",variable.name = "source",value.name = "usage")
+```
+head(long_merged_energy)
+
+library(dplyr)
+tmp<-select(merged_energy,biogas,biomass,geothermal,solar)
+tmp<-filter(merged_energy,imports>7000)
+tmp <- mutate(long_merged_energy, log_usage = log(usage))
+names(tmp)
+head(tmp)
+
+summarize(long_merged_energy, total = sum(usage, na.rm = T))
+
+long_merged_energy %>% 
+  filter(source == "geothermal") %>% 
+  select(-datetime) %>% 
+  mutate(log_usage = log(usage)) %>% 
+
+merged_energy %>% 
+  select(-datetime) %>% 
+  mutate(total_usage = rowSums(., na.rm = T)) %>% 
+summarize(total_usage = sum(total_usage, na.rm = T))
+summarize(mean_log_usage = mean(log_usage, na.rm = T))
+
+```{r}
+merged_energy %>%
+select(contains("hydro")) %>%
+mutate(total_hydro=rowSums(.,na.rm=T)) %>%
+summarize(mean_hydro=mean(total_hydro,na.rm=T))
+```
+
+```{r}
+long_merged_energy%>%
+  group_by(source)%>%
+  summarise(sum_usage=sum(usage,na.rm=T))
+```
+
+```{r}
+merged_energy %>%
+  select(datetime,contains("hydro"),starts_with("bio")) %>%
+  melt(id.vars="datetime",variable.name="source",value.name = "usage")%>%
+  group_by(source)%>%
+  summarize(mean_usage=mean(usage,na.rm = T))
+```
+
